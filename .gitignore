@@ -34,3 +34,6 @@ bin/
 
 imaginary
 bin/imaginary
+
+.vs
+.vscode

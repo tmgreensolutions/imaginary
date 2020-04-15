@@ -84,6 +84,8 @@ RUN DEBIAN_FRONTEND=noninteractive \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+COPY no_image.jpg /usr/local
+
 # Server port to listen
 ENV PORT 9000
 

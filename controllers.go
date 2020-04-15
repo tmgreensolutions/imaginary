@@ -73,6 +73,16 @@ func determineAcceptMimeType(accept string) string {
 	return ""
 }
 
+func isTypeAcceptedByMimeType(accept string, imageType string) bool {
+	for _, v := range strings.Split(accept, ",") {
+		mediaType, _, _ := mime.ParseMediaType(v)
+		if strings.Contains(mediaType, imageType) || ((mediaType == "image/*" || mediaType == "*/*") && !strings.Contains(imageType, "webp")) {
+			return true
+		}
+	}
+	return false
+}
+
 func imageHandler(w http.ResponseWriter, r *http.Request, buf []byte, operation Operation, o ServerOptions) {
 	// Infer the body MIME type via mime sniff algorithm
 	mimeType := http.DetectContentType(buf)
@@ -107,11 +117,15 @@ func imageHandler(w http.ResponseWriter, r *http.Request, buf []byte, operation 
 	vary := ""
 	if opts.Type == "auto" {
 		opts.Type = determineAcceptMimeType(r.Header.Get("Accept"))
-		vary = "Accept" // Ensure caches behave correctly for negotiated content
-	} else if opts.Type != "" && ImageType(opts.Type) == 0 {
+	} else if !isTypeAcceptedByMimeType(r.Header.Get("Accept"), opts.Type) {
+		opts.Type = "jpeg"
+		w.Header().Set("X-Accept-Overriden", opts.Type)
+	} 
+	if opts.Type != "" && ImageType(opts.Type) == 0 {
 		ErrorReply(r, w, ErrOutputFormat, o)
 		return
 	}
+	vary = "Accept" // Ensure caches behave correctly for negotiated content
 
 	image, err := operation.Run(buf, opts)
 	if err != nil {
@@ -140,6 +154,7 @@ func formController(w http.ResponseWriter, r *http.Request) {
 		{"SmartCrop", "crop", "width=300&height=260&quality=95&gravity=smart"},
 		{"Extract", "extract", "top=100&left=100&areawidth=300&areaheight=150"},
 		{"Enlarge", "enlarge", "width=1440&height=900&quality=95"},
+		{"SmartEnlarge", "smartenlarge", "width=1440&height=900&quality=95"},
 		{"Rotate", "rotate", "rotate=180"},
 		{"Flip", "flip", ""},
 		{"Flop", "flop", ""},

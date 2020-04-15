@@ -30,6 +30,7 @@ var OperationsMap = map[string]Operation{
 	"blur":           GaussianBlur,
 	"smartcrop":      SmartCrop,
 	"fit":            Fit,
+	"smartenlarge":	  SmartEnlarge,
 }
 
 // Image stores an image binary buffer and its MIME type
@@ -177,6 +178,41 @@ func Enlarge(buf []byte, o ImageOptions) (Image, error) {
 	return Process(buf, opts)
 }
 
+func SmartEnlarge(buf []byte, o ImageOptions) (Image, error) {
+	if o.Width == 0 || o.Height == 0 {
+		return Image{}, NewError("Missing required params: height, width", BadRequest)
+	}
+
+	meta, err := bimg.Metadata(buf)
+	if err != nil {
+		return Image{}, NewError("Cannot retrieve image metadata: %s"+err.Error(), BadRequest)
+	}
+
+	dims := meta.Size
+	if dims.Width == 0 || dims.Height == 0 {
+		return Image{}, NewError("Width or height of requested image is zero", NotAcceptable)
+	}
+
+	opts := BimgOptions(o)
+	opts.Enlarge = true
+	opts.StripMetadata = true
+	opts.Crop = o.Width < dims.Width || o.Height < dims.Height
+
+	supported, err := bimg.NewImage(buf).ColourspaceIsSupported()
+	if err != nil {
+		return Image{}, NewError("Error while checking if colourspace is supported: %s" + err.Error(), NotAcceptable)
+	} else if !supported {
+		//extend in costum color in cmyk is not supported
+		opts.Extend = bimg.ExtendWhite
+		imagetype := bimg.DetermineImageType(buf)
+		if !bimg.IsTypeSupported(imagetype) || o.Type == "webp" {
+			opts.Type = bimg.JPEG
+		}
+	}
+
+	return Process(buf, opts)
+}
+
 func Extract(buf []byte, o ImageOptions) (Image, error) {
 	if o.AreaWidth == 0 || o.AreaHeight == 0 {
 		return Image{}, NewError("Missing required params: areawidth or areaheight", BadRequest)
@@ -198,6 +234,18 @@ func Crop(buf []byte, o ImageOptions) (Image, error) {
 
 	opts := BimgOptions(o)
 	opts.Crop = true
+
+	supported, err := bimg.NewImage(buf).ColourspaceIsSupported()
+	if err != nil {
+		return Image{}, NewError("Error while checking if colourspace is supported: %s" + err.Error(), NotAcceptable)
+	} else if !supported {
+		//cmyk to webp is not supported
+		imagetype := bimg.DetermineImageType(buf)
+		if !bimg.IsTypeSupported(imagetype) || o.Type == "webp" {
+			opts.Type = bimg.JPEG
+		}
+	}
+	
 	return Process(buf, opts)
 }
 
@@ -275,7 +323,17 @@ func Convert(buf []byte, o ImageOptions) (Image, error) {
 		return Image{}, NewError("Invalid image type: "+o.Type, BadRequest)
 	}
 	opts := BimgOptions(o)
-
+ 
+	supported, err := bimg.NewImage(buf).ColourspaceIsSupported()
+	if err != nil {
+		return Image{}, NewError("Error while checking if colourspace is supported: %s" + err.Error(), NotAcceptable)
+	} else if !supported {
+		//cmyk to webp is not supported
+		imagetype := bimg.DetermineImageType(buf)
+		if !bimg.IsTypeSupported(imagetype) || o.Type == "webp" {
+			opts.Type = bimg.JPEG
+		}
+	}
 	return Process(buf, opts)
 }
 

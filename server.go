@@ -92,6 +92,7 @@ func NewServerMux(o ServerOptions) http.Handler {
 	mux.Handle(join(o, "/resize"), image(Resize))
 	mux.Handle(join(o, "/fit"), image(Fit))
 	mux.Handle(join(o, "/enlarge"), image(Enlarge))
+	mux.Handle(join(o, "/smartenlarge"), image(SmartEnlarge))
 	mux.Handle(join(o, "/extract"), image(Extract))
 	mux.Handle(join(o, "/crop"), image(Crop))
 	mux.Handle(join(o, "/smartcrop"), image(SmartCrop))

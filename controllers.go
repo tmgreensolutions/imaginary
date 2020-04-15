@@ -119,7 +119,7 @@ func imageHandler(w http.ResponseWriter, r *http.Request, buf []byte, operation 
 		opts.Type = determineAcceptMimeType(r.Header.Get("Accept"))
 	} else if !isTypeAcceptedByMimeType(r.Header.Get("Accept"), opts.Type) {
 		opts.Type = "jpeg"
-		w.Header().Set("X-Accept-Overriden", opts.Type)
+		w.Header().Set("X-Accept-Overridden", opts.Type)
 	} 
 	if opts.Type != "" && ImageType(opts.Type) == 0 {
 		ErrorReply(r, w, ErrOutputFormat, o)
